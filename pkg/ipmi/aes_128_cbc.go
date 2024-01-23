@@ -65,8 +65,9 @@ func (a *AES128CBC) DecodeFromBytes(data []byte, _ gopacket.DecodeFeedback) erro
 	// ciphertext is useless on its own, so we don't mind
 	mode.CryptBlocks(data[a.cipher.BlockSize():], data[a.cipher.BlockSize():])
 
-	padBytes := uint8(data[len(data)-1])
-	if padBytes > uint8(a.cipher.BlockSize()-1) {
+	// TODO(pfialho): add comment.
+	padBytes := data[len(data)-1]
+	if padBytes > uint8(a.cipher.BlockSize()) {
 		return fmt.Errorf("invalid number of pad bytes: %v", padBytes)
 	}
 	padStart := len(data) - int(padBytes) - 1

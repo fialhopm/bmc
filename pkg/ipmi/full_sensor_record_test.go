@@ -218,6 +218,7 @@ func TestFullSensorRecordDecodeFromBytes(t *testing.T) {
 				Identity:                `8$ ='[\V_`,
 			},
 		},
+		// TODO(pfialho): add comment asking if we should add a test here for testing unicode decoding.
 	}
 	for _, test := range tests {
 		fsr := &FullSensorRecord{}

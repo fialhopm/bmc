@@ -86,6 +86,14 @@ var (
 		Function: NetworkFunctionStorageRsp,
 		Command:  0x20,
 	}
+	OperationReserveSDRRepositoryReq = Operation{
+		Function: NetworkFunctionStorageReq,
+		Command:  0x22,
+	}
+	OperationReserveSDRRepositoryRsp = Operation{
+		Function: NetworkFunctionStorageRsp,
+		Command:  0x22,
+	}
 	OperationGetSDRReq = Operation{
 		Function: NetworkFunctionStorageReq,
 		Command:  0x23,

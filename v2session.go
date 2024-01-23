@@ -33,15 +33,18 @@ type V2Session struct {
 	// packets.
 	RemoteID uint32
 
-	// AuthenticatedSequenceNumbers is the pair of sequence numbers for
+	// AuthenticatedSessionSequenceNumbers is the pair of sequence numbers for
 	// authenticated packets.
-	AuthenticatedSequenceNumbers sequenceNumbers
+	AuthenticatedSessionSequenceNumbers sequenceNumbers
 
-	// UnauthenticatedSequenceNumbers is the pair of sequence numbers for
+	// UnauthenticatedSessionSequenceNumbers is the pair of sequence numbers for
 	// unauthenticated packets, i.e. those without an auth code. We only send
 	// unauthenticated packets to the BMC if IntegrityAlgorithmNone was
 	// negotiated.
-	UnauthenticatedSequenceNumbers sequenceNumbers
+	UnauthenticatedSessionSequenceNumbers sequenceNumbers
+
+	// TODO(pfialho): learn about message vs session sequence number
+	// MessageSequenceNumbers
 
 	// SIK is the session integrity key, whose creation is described in section
 	// 13.31 of the specs. It is the result of applying the negotiated
@@ -168,8 +171,8 @@ func (s *V2Session) buildAndSend(ctx context.Context, c ipmi.Command) error {
 
 		// TODO handle AuthenticationAlgorithmNone properly
 		// TODO handle ConfidentialityAlgorithmNone properly
-		s.AuthenticatedSequenceNumbers.Inbound++
-		s.v2SessionLayer.Sequence = s.AuthenticatedSequenceNumbers.Inbound
+		s.AuthenticatedSessionSequenceNumbers.Inbound++
+		s.v2SessionLayer.Sequence = s.AuthenticatedSessionSequenceNumbers.Inbound
 		if err := gopacket.SerializeLayers(s.buffer, serializeOptions,
 			&s.rmcpLayer,
 			// session selector only used when decoding

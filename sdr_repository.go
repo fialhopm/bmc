@@ -61,10 +61,16 @@ func RetrieveSDRRepository(ctx context.Context, s Session) (SDRRepository, error
 // changing behind its back.
 func walkSDRs(ctx context.Context, s Session) (SDRRepository, error) {
 	repo := SDRRepository{} // we could set a size; it's a micro-optimisation
+
+	reserveSDRRepoCmd := &ipmi.ReserveSDRRepositoryCmd{}
+	if err := ValidateResponse(s.SendCommand(ctx, reserveSDRRepoCmd)); err != nil {
+		return nil, err
+	}
 	getSDRCmd := &ipmi.GetSDRCmd{
 		Req: ipmi.GetSDRReq{
-			RecordID: ipmi.RecordIDFirst,
-			Length:   0xff,
+			RecordID:      ipmi.RecordIDFirst,
+			Length:        0x05,                                // only request the header
+			ReservationID: reserveSDRRepoCmd.Rsp.ReservationID, // needed for partial readings
 		},
 	}
 
@@ -74,24 +80,44 @@ func walkSDRs(ctx context.Context, s Session) (SDRRepository, error) {
 	// duplicate it.
 	for getSDRCmd.Req.RecordID != ipmi.RecordIDLast {
 		if err := ValidateResponse(s.SendCommand(ctx, getSDRCmd)); err != nil {
-			// if we get a 0xca or 0xff, we need to implement reservations and
-			// partial reading - hopefully we'll be alright - yet to see a SDR
-			// >70 bytes long - they're specified as 64 after all.
 			return nil, err
 		}
 
-		packet := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeSDR,
+		headerPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeSDR,
 			gopacket.DecodeOptions{
 				Lazy: true,
 				// we can't set NoCopy because we reuse getSDRCmd.Rsp
 			})
-		if packet == nil {
-			return nil, fmt.Errorf("invalid SDR: %v", getSDRCmd)
+		if headerPacket == nil || len(headerPacket.Layers()) == 0 {
+			return nil, fmt.Errorf("invalid SDR: missing SDR layer: %v", getSDRCmd)
 		}
-		if fsrLayer := packet.Layer(ipmi.LayerTypeFullSensorRecord); fsrLayer != nil {
-			repo[getSDRCmd.Req.RecordID] = fsrLayer.(*ipmi.FullSensorRecord)
+		sdr := headerPacket.Layers()[0].(*ipmi.SDR)
+		if sdr.Type == ipmi.RecordTypeFullSensor {
+			if sdr.Length > 59 {
+				// SDR exceeds the specified length of 64. Need to read in chunks.
+				return nil, fmt.Errorf("invalid SDR: length exceeds 64 bytes: %v", sdr.Length)
+			}
+
+			getSDRCmd.Req.Offset = 0x05
+			getSDRCmd.Req.Length = sdr.Length
+			if err := ValidateResponse(s.SendCommand(ctx, getSDRCmd)); err != nil {
+				return nil, err
+			}
+
+			fsrPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeFullSensorRecord,
+				gopacket.DecodeOptions{
+					Lazy: true,
+				})
+			if fsrPacket == nil || len(fsrPacket.Layers()) == 0 {
+				return nil, fmt.Errorf("invalid SDR: missing FSR layer: %v", getSDRCmd)
+			}
+			fsr := fsrPacket.Layers()[0].(*ipmi.FullSensorRecord)
+			repo[getSDRCmd.Req.RecordID] = fsr
 		}
+
 		getSDRCmd.Req.RecordID = getSDRCmd.Rsp.Next
+		getSDRCmd.Req.Offset = 0x00
+		getSDRCmd.Req.Length = 0x05
 	}
 	return repo, nil
 }
