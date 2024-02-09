@@ -119,7 +119,7 @@ func walkSDRs(ctx context.Context, s Session) (SDRRepository, error) {
 			getSDRCmd.Req.Offset = sdrHeaderLength
 			getSDRCmd.Req.Length = header.Length
 			if err := ValidateResponse(s.SendCommand(ctx, getSDRCmd)); err != nil {
-				fmt.Printf("failed to get FSR: %v", error)
+				fmt.Printf("failed to get FSR: %v", err)
 			} else {
 				fsrPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeFullSensorRecord,
 					gopacket.DecodeOptions{Lazy: true})
