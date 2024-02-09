@@ -119,19 +119,20 @@ func walkSDRs(ctx context.Context, s Session) (SDRRepository, error) {
 			getSDRCmd.Req.Offset = sdrHeaderLength
 			getSDRCmd.Req.Length = header.Length
 			if err := ValidateResponse(s.SendCommand(ctx, getSDRCmd)); err != nil {
-				return nil, err
+				fmt.Printf("failed to get FSR: %v", error)
+			} else {
+				fsrPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeFullSensorRecord,
+					gopacket.DecodeOptions{Lazy: true})
+				if fsrPacket == nil {
+					return nil, fmt.Errorf("invalid Full Sensor Record: %v", getSDRCmd)
+				}
+				fsrLayer := fsrPacket.Layer(ipmi.LayerTypeFullSensorRecord)
+				if fsrLayer == nil {
+					return nil, fmt.Errorf("packet is missing Full Sensor Record layer: %v",
+						getSDRCmd)
+				}
+				repo[getSDRCmd.Req.RecordID] = fsrLayer.(*ipmi.FullSensorRecord)
 			}
-			fsrPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeFullSensorRecord,
-				gopacket.DecodeOptions{Lazy: true})
-			if fsrPacket == nil {
-				return nil, fmt.Errorf("invalid Full Sensor Record: %v", getSDRCmd)
-			}
-			fsrLayer := fsrPacket.Layer(ipmi.LayerTypeFullSensorRecord)
-			if fsrLayer == nil {
-				return nil, fmt.Errorf("packet is missing Full Sensor Record layer: %v",
-					getSDRCmd)
-			}
-			repo[getSDRCmd.Req.RecordID] = fsrLayer.(*ipmi.FullSensorRecord)
 		}
 
 		getSDRCmd.Req.RecordID = getSDRCmd.Rsp.Next
