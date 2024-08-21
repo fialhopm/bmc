@@ -38,16 +38,19 @@ func RetrieveSDRRepository(ctx context.Context, s Session) (SDRRepository, error
 		if err != nil {
 			return err
 		}
+		fmt.Printf("len initialInfo.Records: %d", len(initialInfo.Records))
 		// we could error here if unsupported SDR Repo version; no such cases
 		// currently exist
 		candidateRepo, err := walkSDRs(ctx, s)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("len candidateRepo: %d", len(candidateRepo))
 		finalInfo, err := s.GetSDRRepositoryInfo(ctx)
 		if err != nil {
 			return err
 		}
+		fmt.Printf("len finalInfo.Records: %d", len(finalInfo.Records))
 		if initialInfo.LastAddition.Before(finalInfo.LastAddition) ||
 			initialInfo.LastErase.Before(finalInfo.LastErase) {
 			// tough luck, start again
