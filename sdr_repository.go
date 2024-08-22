@@ -38,19 +38,19 @@ func RetrieveSDRRepository(ctx context.Context, s Session) (SDRRepository, error
 		if err != nil {
 			return err
 		}
-		fmt.Printf("initialInfo.Records: %d", initialInfo.Records)
+		fmt.Printf("initialInfo.Records: %d\n", initialInfo.Records)
 		// we could error here if unsupported SDR Repo version; no such cases
 		// currently exist
 		candidateRepo, err := walkSDRs(ctx, s)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("len candidateRepo: %d", len(candidateRepo))
+		fmt.Printf("len candidateRepo: %d\n", len(candidateRepo))
 		finalInfo, err := s.GetSDRRepositoryInfo(ctx)
 		if err != nil {
 			return err
 		}
-		fmt.Printf("finalInfo.Records: %d", finalInfo.Records)
+		fmt.Printf("finalInfo.Records: %d\n", finalInfo.Records)
 		if initialInfo.LastAddition.Before(finalInfo.LastAddition) ||
 			initialInfo.LastErase.Before(finalInfo.LastErase) {
 			// tough luck, start again
@@ -122,7 +122,7 @@ func walkSDRs(ctx context.Context, s Session) (SDRRepository, error) {
 			getSDRCmd.Req.Offset = sdrHeaderLength
 			getSDRCmd.Req.Length = header.Length
 			if err := ValidateResponse(s.SendCommand(ctx, getSDRCmd)); err != nil {
-				fmt.Printf("failed to get FSR: %v", err)
+				fmt.Printf("failed to get FSR: %v\n", err)
 			} else {
 				fsrPacket := gopacket.NewPacket(getSDRCmd.Rsp.Payload, ipmi.LayerTypeFullSensorRecord,
 					gopacket.DecodeOptions{Lazy: true})
